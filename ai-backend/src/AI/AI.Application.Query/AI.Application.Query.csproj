@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <RootNamespace>AI.Business.Query</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\AI.Application.Query.Abstractions\AI.Application.Query.Abstractions.csproj" />
+      <ProjectReference Include="..\AI.Application\AI.Application.csproj" />
+      <ProjectReference Include="..\AI.Infrastructure\AI.Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,30 @@
+<div class="chat-window">
+  <div class="chat-header">
+    <h2>Чат AI</h2>
+  </div>
+
+  <div class="chat-messages" #scrollContainer>
+    @for (msg of messages; track msg) {
+      <div class="message-row" [class.incoming]="msg.type === 'incoming'" [class.outgoing]="msg.type === 'outgoing'">
+        <div class="message">
+          @if (msg.type === 'incoming') {
+            <markdown [data]="msg.text"></markdown>
+          } @else {
+            <p>{{ msg.text }}</p>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="chat-input-area">
+    <input
+      type="text"
+      placeholder="Введите сообщение..."
+      class="chat-input"
+      [(ngModel)]="messageText"
+      (keydown.enter)="sendMessage()"
+    >
+    <button class="send-btn" (click)="sendMessage()">Отправить</button>
+  </div>
+</div>

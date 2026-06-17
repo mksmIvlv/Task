@@ -1,0 +1,93 @@
+# BACKEND: ASP.NET Core
+bin/
+obj/
+out/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.dbmdl
+*.pidb
+*.svclog
+*.sdf
+*.cache
+*.pdb
+*.mdb
+
+# ASP.NET Core config files
+appsettings.json
+appsettings.*.json
+secrets.json
+
+# Local environment
+.env
+.env.*
+
+# Logs and diagnostic
+*.log
+logs/
+LogFiles/
+
+# Publish output
+publish/
+*.publish.xml
+
+# Entity Framework
+migrations/
+*.dacpac
+*.bacpac
+
+# Test output
+TestResults/
+*.coverage
+*.coveragexml
+*.testsettings
+*.runsettings
+
+# Visual Studio / Rider
+.vs/
+.vscode/
+.idea/
+*.sln.iml
+
+# FRONTEND
+node_modules/
+dist/
+build/
+*.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.angular/
+dist/
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+*.old
+*.orig
+
+# Docker / CI/CD
+Dockerfile
+.dockerignore
+.azure-pipelines/
+.github/
+artifacts/
+tools/
+
+# Optional: if you use SSL certificates locally
+*.pem
+*.crt
+*.key
+certs/
