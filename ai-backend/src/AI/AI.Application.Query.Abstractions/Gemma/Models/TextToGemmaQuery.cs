@@ -1,6 +1,5 @@
-﻿using AI.Domain.Gemma.Models;
-using MediatR;
+﻿using MediatR;
 
 namespace AI.Business.Query.Abstractions.Gemma.Models;
 
-public record TextToGemmaQuery(string TextQuery) : IRequest<GemmaTextResponseAI>;
+public record TextToGemmaQuery(string TextQuery) : IStreamRequest<string>;

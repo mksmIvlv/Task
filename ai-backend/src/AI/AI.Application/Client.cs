@@ -13,30 +13,42 @@ public class Client : IClient
         client = new HttpClient();
     }
     
-    public async Task<string> PostRequestAsync(string uri, string promt, string modelLlm)
+    public async IAsyncEnumerable<string> PostRequestAsync(string uri, string prompt, string modelLlm, CancellationToken cancellationToken)
     {
         var requestBody = new
         {
-            model = modelLlm,
-            prompt = promt
+            model = modelLlm, 
+            prompt = prompt, 
+            stream = true
         };
-        var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+        using var request = new HttpRequestMessage(HttpMethod.Post, uri);
+        request.Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
 
-        var response = await client.PostAsync(uri, content);
-        var allText = await response.Content.ReadAsStringAsync();
-        var fullText = new StringBuilder();
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        foreach (var line in allText.Split('\n'))
+        while (!reader.EndOfStream)
         {
-            if (string.IsNullOrWhiteSpace(line)) continue;
+            cancellationToken.ThrowIfCancellationRequested();
 
-            using var doc = JsonDocument.Parse(line);
-            if (doc.RootElement.TryGetProperty("response", out var resp))
+            string line = await reader.ReadLineAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(line))
             {
-                fullText.Append(resp.GetString());
+                continue;
+            }
+            
+            using var json = JsonDocument.Parse(line);
+            if (json.RootElement.TryGetProperty("response", out var resp))
+            {
+                string data = resp.GetString();
+                if (!string.IsNullOrEmpty(data))
+                {
+                    yield return data; 
+                }
             }
         }
-
-        return fullText.ToString();
     }
 }

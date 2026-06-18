@@ -2,5 +2,5 @@
 
 public interface IClient
 {
-    Task<string> PostRequestAsync(string uri, string promt, string modelLlm);
+    IAsyncEnumerable<string> PostRequestAsync(string uri, string promt, string modelLlm, CancellationToken cancellationToken);
 }

@@ -1,23 +1,13 @@
 ﻿using AI.Application.Abstrations.Interfaces;
 using AI.Business.Query.Abstractions.Gemma.Models;
-using AI.Domain.Gemma.Models;
 using MediatR;
 
 namespace AI.Business.Query.Gemma;
 
-public class TextToGemmaQueryHandler(IClient client): IRequestHandler<TextToGemmaQuery, GemmaTextResponseAI>
+public class TextToGemmaQueryHandler(IClient client) : IStreamRequestHandler<TextToGemmaQuery, string>
 {
-    public async Task<GemmaTextResponseAI> Handle(TextToGemmaQuery request, CancellationToken cancellationToken)
+    public IAsyncEnumerable<string> Handle(TextToGemmaQuery request, CancellationToken cancellationToken)
     {
-        var ollamaRequest = new 
-        {
-            Model = "gemma:7b",
-            Prompt = request.TextQuery,
-            Stream = false
-        };
-        
-        var text = await client.PostRequestAsync("http://localhost:11434/api/generate", request.TextQuery, "gemma:7b");
-
-        return new GemmaTextResponseAI { Body = text };
+        return client.PostRequestAsync("http://localhost:11434/api/generate", request.TextQuery, "gemma:7b", cancellationToken);
     }
 }
