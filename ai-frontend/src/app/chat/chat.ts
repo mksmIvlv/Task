@@ -1,13 +1,17 @@
-import { Component, inject, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  ViewChild,
+  ElementRef,
+  signal,
+  ChangeDetectionStrategy,
+  effect
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TextDto } from '../core/dtos/TextDto';
 import { MarkdownComponent } from 'ngx-markdown';
-import { apiConfig } from '../config/api';
-
-export interface Message {
-  text: string;
-  type: 'incoming' | 'outgoing';
-}
+import { ChatService } from '../core/services/chat.service';
+import { Message } from '../core/models/message';
 
 @Component({
   selector: 'app-chat',
@@ -15,129 +19,72 @@ export interface Message {
   imports: [FormsModule, MarkdownComponent],
   templateUrl: './chat.html',
   styleUrl: './chat.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
+
 export class Chat {
-  private cdr = inject(ChangeDetectorRef);
+  private chatService = inject(ChatService);
 
   @ViewChild('scrollContainer') private scrollContainer!: ElementRef;
 
-  messageText: string = '';
-  messages: Message[] = [];
-  apiUrl: string = apiConfig.sendTextQuery;
+  messageText = '';
+  messages = signal<Message[]>([]);
+  isTyping = signal(false);
+
+  constructor() {
+    effect(() => {
+      if (this.messages().length) {
+        this.scrollToBottom();
+      }
+    });
+  }
 
   sendMessage() {
-    if (!this.messageText.trim()) return;
+    const text = this.messageText.trim();
+    if (!text || !this.chatService.isConnected()) return;
 
-    const userQuery = this.messageText;
-    this.messages.push({
-      text: userQuery,
-      type: 'outgoing',
-    });
-
-    const body: TextDto = {
-      text: userQuery,
-    };
-
+    this.messages.update(prev => [...prev, { text, type: 'outgoing' }]);
     this.messageText = '';
+    this.isTyping.set(true);
 
-    this.messages.push({
-      text: 'печатает...',
-      type: 'incoming',
-    });
+    const body: TextDto = { text };
+    let assistantMessage: Message | null = null;
 
-    this.cdr.detectChanges();
-    this.scrollToBottom();
+    this.chatService.streamTextQuery(body).subscribe({
+      next: (parsed) => {
+        if (this.isTyping()) {
+          this.isTyping.set(false);
+          assistantMessage = { text: '', type: 'incoming' };
+          this.messages.update(prev => [...prev, assistantMessage!]);
+        }
 
-    fetch(this.apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+        if (parsed.error) {
+          this.handleError('Ошибка при ответе бэкенда.');
+        } else if (parsed.text && assistantMessage) {
+          assistantMessage.text += parsed.text;
+          this.messages.update(prev => [...prev]);
+        }
       },
-      body: JSON.stringify(body),
-    })
-      .then(async (response) => {
-        if (!response.body) {
-          throw new Error('Поток данных не поддерживается');
-        }
+      error: () => {
+        this.isTyping.set(false);
+        this.handleError('Ошибка соединения.');
+      },
+      complete: () => {
+        this.isTyping.set(false);
+      }
+    });
+  }
 
-        this.messages.pop();
-
-        // Добавить пустое сообщение
-        const aiMessage = {
-          text: '',
-          type: 'incoming' as const,
-        };
-        this.messages.push(aiMessage);
-        this.cdr.detectChanges();
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let buffer = '';
-
-        // Читать поток
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done){
-            break;
-          }
-
-          // Декодировать значения
-          buffer += decoder.decode(value, { stream: true });
-
-          // Разбиваем буфер по стандарту SSE
-          const lines = buffer.split('\n\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              // Убираем префикс "data: "
-              const jsonString = line.replace('data: ', '').trim();
-              if (!jsonString) continue;
-
-              try {
-                const parsed = JSON.parse(jsonString);
-
-                if (parsed.error) {
-                  console.error('Ошибка от ИИ:', parsed.error);
-                  aiMessage.text = 'Произошла ошибка при генерации текста.';
-                } else if (parsed.text) {
-                  // добавить кусочек текста в UI
-                  aiMessage.text += parsed.text;
-                  this.cdr.detectChanges();
-                  this.scrollToBottom();
-                }
-              } catch (e) {
-                console.error('Ошибка парсинга JSON строки:', line, e);
-              }
-            }
-          }
-        }
-      })
-      .catch((error) => {
-        console.error('Произошла ошибка при отправке:', error);
-
-        if (
-          this.messages.length > 0 &&
-          this.messages[this.messages.length - 1].text === 'печатает...'
-        ) {
-          this.messages.pop();
-        }
-
-        this.messages.push({
-          text: 'Ошибка связи с сервером. Попробуйте позже.',
-          type: 'incoming',
-        });
-        this.cdr.detectChanges();
-        this.scrollToBottom();
-      });
+  private handleError(text: string) {
+    this.messages.update(prev => [...prev, { text, type: 'incoming' }]);
   }
 
   private scrollToBottom(): void {
-    try {
-      setTimeout(() => {
-        this.scrollContainer.nativeElement.scrollTop =
-          this.scrollContainer.nativeElement.scrollHeight;
-      }, 0);
-    } catch (err) {}
+    setTimeout(() => {
+      if (this.scrollContainer) {
+        const el = this.scrollContainer.nativeElement;
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      }
+    }, 50);
   }
 }

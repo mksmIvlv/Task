@@ -7,6 +7,7 @@ public static class ApiExtensions
         services.AddOpenApi();
         services.AddControllers();
         services.AddEndpointsApiExplorer();
+        services.AddSignalR();
 
         services.AddSwaggerGen(c =>
         {
@@ -15,10 +16,13 @@ public static class ApiExtensions
 
         services.AddCors(options =>
         {
-            options.AddPolicy("AllowLocalhost5173", builder =>
-                builder.WithOrigins("http://localhost:5173")
+            options.AddPolicy("DevCorsPolicy", policy =>
+            {
+                policy.WithOrigins("http://localhost:4200", "http://localhost:55300")
+                    .AllowAnyHeader()
                     .AllowAnyMethod()
-                    .AllowAnyHeader());
+                    .AllowCredentials();
+            });
         });
         
         return services;
